@@ -198,9 +198,14 @@ function NotificationsPage() {
               const actor = getProfile(n.actor_id);
               const { icon: Icon, tint } = meta[n.type] || meta.like;
               return (
-                <button
+                <div
                   key={n.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => handleOpen(n)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleOpen(n);
+                  }}
                   style={{ animationDelay: `${i * 45}ms` }}
                   className={cn(
                     "glass-panel flex w-full animate-in items-start gap-3 rounded-3xl p-4 text-left shadow-soft transition-all duration-300 fade-in slide-in-from-bottom-3 hover:-translate-y-0.5 hover:shadow-lift cursor-pointer",
@@ -229,9 +234,12 @@ function NotificationsPage() {
                       />
                     </span>
                     <span className="mt-1 block text-sm text-muted-foreground">{n.body}</span>
+                    {(n as any).action?.kind === "workspace_invite" && (
+                      <InviteActions notification={n as any} />
+                    )}
                   </span>
                   {!n.read && <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-brand" />}
-                </button>
+                </div>
               );
             })}
 
@@ -248,5 +256,51 @@ function NotificationsPage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+function InviteActions({ notification }: { notification: { action: { member_id: string; state: string } } }) {
+  const [state, setState] = useState(notification.action.state);
+  const [busy, setBusy] = useState(false);
+  async function respond(accept: boolean) {
+    setBusy(true);
+    const { error } = await (supabase as any).rpc("respond_workspace_invite", {
+      _member_id: notification.action.member_id,
+      _accept: accept,
+    });
+    setBusy(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setState(accept ? "accepted" : "declined");
+    toast.success(accept ? "You joined the team" : "Invite declined");
+  }
+  if (state !== "pending") {
+    return (
+      <span className="mt-2 inline-block rounded-full bg-foreground/5 px-3 py-1 text-xs font-semibold capitalize text-muted-foreground">
+        {state}
+      </span>
+    );
+  }
+  return (
+    <span className="mt-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => respond(true)}
+        className="rounded-full bg-primary px-4 py-1.5 text-xs font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+      >
+        Accept
+      </button>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => respond(false)}
+        className="rounded-full border border-border px-4 py-1.5 text-xs font-bold text-foreground hover:bg-foreground/5 disabled:opacity-60"
+      >
+        Decline
+      </button>
+    </span>
   );
 }
