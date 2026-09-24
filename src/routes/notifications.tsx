@@ -43,6 +43,7 @@ import { clearAllUnreadNotifications, decrementUnreadNotifications } from "@/lib
 import { useRealtime } from "@/lib/realtime";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/notifications")({
   head: () => ({
@@ -65,6 +66,10 @@ export const Route = createFileRoute("/notifications")({
 
 const meta: Record<Notification["type"], { icon: typeof Heart; tint: string }> = {
   like: { icon: Heart, tint: "from-rose-500 to-pink-500" },
+  ...({
+    workspace_invite: { icon: UserPlus, tint: "from-emerald-500 to-teal-500" },
+    workspace: { icon: UserPlus, tint: "from-emerald-500 to-teal-500" },
+  } as any),
   follow: { icon: UserPlus, tint: "from-violet-500 to-fuchsia-500" },
   comment: { icon: MessageCircle, tint: "from-sky-500 to-cyan-500" },
   reply: { icon: MessageCircle, tint: "from-blue-500 to-indigo-500" },
@@ -134,6 +139,10 @@ function NotificationsPage() {
     void handleMarkRead(n.id);
     if (n.type === "space") {
       void navigate({ to: "/spaces" });
+      return;
+    }
+    if ((n.type as string) === "workspace_invite" || (n.type as string) === "workspace") {
+      void navigate({ to: "/settings", search: { section: "workspace" } as any });
       return;
     }
     if (n.type === "tip") {
