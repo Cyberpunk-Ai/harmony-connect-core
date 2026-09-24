@@ -1,3 +1,4 @@
+import { useCurrentUserId } from "@/hooks/useCurrentUserId";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState, useEffect, lazy, Suspense } from "react";
 import {
@@ -147,6 +148,18 @@ function ProfilePage() {
       .catch((err) => console.warn("Failed loading profile details:", err))
       .finally(() => setLoading(false));
   }, [isMe, targetId]);
+
+  const viewerId = useCurrentUserId();
+  useEffect(() => {
+    if (isMe || viewerId === "guest" || !userProfile?.id || userProfile.id === "guest") return;
+    let alive = true;
+    void isFollowingUser(userProfile.id)
+      .then((v) => alive && setIsFollowing(v))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [isMe, viewerId, userProfile?.id]);
 
   useRealtime(
     (event) => {
