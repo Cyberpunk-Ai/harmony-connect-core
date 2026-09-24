@@ -27,6 +27,7 @@ import { Avatar } from "@/components/social/Avatar";
 import { TipModal } from "@/components/social/TipModal";
 import type { Space, Profile } from "@/lib/types";
 import { currentUser, getProfile } from "@/lib/profile-service";
+import { useSpaceAudio } from "@/hooks/useSpaceAudio";
 import {
   joinSpace,
   getSpaceRoom,
@@ -403,6 +404,20 @@ function SpaceRoomModalContent({ space, onClose }: { space: Space; onClose: () =
 
   const speakers = participants.filter((p) => p.role === "host" || p.role === "speaker");
   const listeners = participants.filter((p) => p.role === "listener");
+  const myRole = participants.find((p) => p.id === currentUser.id)?.role ?? (isCurrentUserHost ? "host" : "listener");
+  const audio = useSpaceAudio({
+    spaceId: space.id,
+    userId: currentUser.id,
+    speaker: myRole !== "listener",
+    muted: isMuted,
+    enabled: true,
+  });
+  useEffect(() => {
+    if (audio.status === "mic-blocked") toast.error("Microphone access was blocked. Allow it in your browser to speak.");
+  }, [audio.status]);
+  useEffect(() => {
+    if (audio.overCapacity) toast.warning("This room is above the live-audio speaker limit; some speakers may not be heard.");
+  }, [audio.overCapacity]);
 
   return (
     <>
@@ -615,7 +630,7 @@ function SpaceRoomModalContent({ space, onClose }: { space: Space; onClose: () =
                             <div
                               className={cn(
                                 "rounded-full p-1 transition-all duration-500",
-                                speaker.isSpeaking
+                                (audio.speakingIds.has(speaker.id) || speaker.isSpeaking)
                                   ? "ring-4 ring-brand shadow-glow animate-pulse"
                                   : "ring-1 ring-border",
                               )}
@@ -656,7 +671,7 @@ function SpaceRoomModalContent({ space, onClose }: { space: Space; onClose: () =
                             <span className="text-[10px] text-muted-foreground capitalize">
                               {speaker.role}
                             </span>
-                            {speaker.isSpeaking && (
+                            {(audio.speakingIds.has(speaker.id) || speaker.isSpeaking) && (
                               <div className="flex items-center gap-0.5">
                                 <span className="h-2 w-0.5 rounded-full bg-emerald-500 animate-pulse" />
                                 <span className="h-3.5 w-0.5 rounded-full bg-emerald-500 animate-bounce" />
