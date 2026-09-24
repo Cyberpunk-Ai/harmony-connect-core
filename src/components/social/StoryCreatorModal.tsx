@@ -73,6 +73,7 @@ const AI_PROMPT_CHIPS = [
 ];
 
 export function StoryCreatorModal({ isOpen, onClose, onStoryCreated }: StoryCreatorModalProps) {
+  const [mobileView, setMobileView] = useState<"edit" | "preview">("edit");
   const [tab, setTab] = useState<"text" | "media" | "ai">("text");
   const [text, setText] = useState("");
   const [selectedGradient, setSelectedGradient] = useState(GRADIENT_PRESETS[0].class);
@@ -168,7 +169,22 @@ export function StoryCreatorModal({ isOpen, onClose, onStoryCreated }: StoryCrea
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
       <div className="relative flex flex-col md:flex-row w-full max-w-4xl max-h-[95vh] md:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl bg-card border border-border shadow-lift">
         {/* Left Side: Story Controls & Customizer */}
-        <div className="flex-1 flex flex-col justify-between p-4 sm:p-6 overflow-y-auto max-h-[60vh] md:max-h-[90vh]">
+        {/* Mobile: toggle between editing and preview so the preview never covers the controls */}
+        <div className="md:hidden flex rounded-full bg-foreground/5 p-1 m-3 mb-0 gap-1" role="tablist">
+          {(["edit", "preview"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="tab"
+              aria-selected={mobileView === m}
+              onClick={() => setMobileView(m)}
+              className={`flex-1 rounded-full py-2 text-xs font-bold capitalize transition-colors ${mobileView === m ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+        <div className={`flex-1 flex-col justify-between p-4 sm:p-6 overflow-y-auto max-h-[85vh] md:max-h-[90vh] ${mobileView === "edit" ? "flex" : "hidden md:flex"}`}>
           <div>
             {/* Top Bar */}
             <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-border">
@@ -527,7 +543,7 @@ export function StoryCreatorModal({ isOpen, onClose, onStoryCreated }: StoryCrea
         </div>
 
         {/* Right Side: Live Story Preview Screen */}
-        <div className="w-full md:w-[320px] bg-slate-950 p-6 flex flex-col items-center justify-center border-t md:border-t-0 md:border-l border-border/50">
+        <div className={`w-full md:w-[320px] bg-slate-950 p-6 flex-col items-center justify-center border-t md:border-t-0 md:border-l border-border/50 ${mobileView === "preview" ? "flex" : "hidden md:flex"}`}>
           <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-3">
             Live Preview
           </p>

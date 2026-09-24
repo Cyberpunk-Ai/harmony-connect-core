@@ -1,3 +1,4 @@
+import { useCurrentUserId } from "@/hooks/useCurrentUserId";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { Search, TrendingUp, Radio, Plus, Check } from "lucide-react";
@@ -51,10 +52,11 @@ export function FollowButton({
 }) {
   const [following, setFollowing] = useState(initial);
   const [loading, setLoading] = useState(false);
+  const viewerId = useCurrentUserId();
 
-  // Read the saved follow state so it survives a refresh.
+  // Read the saved follow state so it survives a refresh (re-run once sign-in is known).
   useEffect(() => {
-    if (!targetUserId) return;
+    if (!targetUserId || viewerId === "guest") return;
     let alive = true;
     isFollowing(targetUserId)
       .then((v) => alive && setFollowing(v))
@@ -62,7 +64,7 @@ export function FollowButton({
     return () => {
       alive = false;
     };
-  }, [targetUserId]);
+  }, [targetUserId, viewerId]);
 
   async function handleToggle() {
     if (!targetUserId || loading) return;
