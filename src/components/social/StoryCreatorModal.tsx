@@ -73,6 +73,7 @@ const AI_PROMPT_CHIPS = [
 ];
 
 export function StoryCreatorModal({ isOpen, onClose, onStoryCreated }: StoryCreatorModalProps) {
+  const [mobileView, setMobileView] = useState<"edit" | "preview">("edit");
   const [tab, setTab] = useState<"text" | "media" | "ai">("text");
   const [text, setText] = useState("");
   const [selectedGradient, setSelectedGradient] = useState(GRADIENT_PRESETS[0].class);
