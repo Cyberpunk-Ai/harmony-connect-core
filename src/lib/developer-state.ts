@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { createApiKey } from "@/lib/developer.functions";
 import {
   deleteOwnedRow,
   insertOwnedRow,
@@ -23,6 +24,7 @@ export interface Webhook {
   description: string;
   events: string[];
   status: "active" | "paused";
+  secret?: string;
   createdAt: string;
 }
 
@@ -45,11 +47,6 @@ function commit(next: DeveloperState) {
   listeners.forEach((fn) => fn());
 }
 
-function randomToken() {
-  const bytes = new Uint8Array(24);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-}
 
 async function hydrate() {
   const userId = signedInProfileId();
@@ -65,7 +62,7 @@ async function hydrate() {
     loadOwnedRows<ApiKey>("api_keys", (row) => ({
       id: String(row.id),
       name: String(row.name),
-      maskedKey: `${row.prefix}••••••••${String(row.key_hash).slice(-6)}`,
+      maskedKey: `${row.prefix}••••••••${String(row.last4 ?? "")}`,
       createdAt: new Date(row.created_at).toLocaleDateString(),
       lastUsed: row.last_used_at ? new Date(row.last_used_at).toLocaleDateString() : "Never",
       calls: Number(row.call_count ?? 0),
@@ -73,7 +70,8 @@ async function hydrate() {
     loadOwnedRows<Webhook>("webhooks", (row) => ({
       id: String(row.id),
       url: String(row.url),
-      description: "",
+      description: String(row.description ?? ""),
+      secret: String(row.secret ?? ""),
       events: Array.isArray(row.events) ? (row.events as string[]) : [],
       status: row.active ? "active" : "paused",
       createdAt: new Date(row.created_at).toLocaleDateString(),
@@ -97,20 +95,15 @@ export function useDeveloper() {
   }, []);
 
   async function generateApiKey(name: string): Promise<ApiKey> {
-    const token = `sk_live_${randomToken()}`;
-    const row = await insertOwnedRow("api_keys", {
-      name,
-      prefix: "sk_live_",
-      key_hash: token.slice(-12),
-      scopes: ["read"],
-    });
+    const created = await createApiKey({ data: { name } });
     const key: ApiKey = {
-      id: String(row?.id ?? `key_${Date.now()}`),
+      id: created.id,
       name,
-      maskedKey: `sk_live_••••••••${token.slice(-6)}`,
-      fullKey: token,
-      createdAt: new Date().toLocaleDateString(),
+      maskedKey: `sk_live_••••••••${created.last4}`,
+      fullKey: created.token,
+      createdAt: new Date(created.createdAt).toLocaleDateString(),
       lastUsed: "Never",
+      calls: 0,
     };
     commit({ ...state, apiKeys: [key, ...state.apiKeys] });
     return key;
@@ -122,7 +115,7 @@ export function useDeveloper() {
   }
 
   async function addWebhook(url: string, description: string, events: string[]) {
-    const row = await insertOwnedRow("webhooks", { url, events, active: true }).catch(() => null);
+    const row = await insertOwnedRow("webhooks", { url, events, active: true, description }).catch(() => null);
     const hook: Webhook = {
       id: String(row?.id ?? `wh_${Date.now()}`),
       url,
