@@ -1,3 +1,4 @@
+import { useCurrentUserId } from "@/hooks/useCurrentUserId";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Sparkles, RefreshCw, Loader2, Plus, Sparkle, ArrowUp, Compass } from "lucide-react";
@@ -322,10 +323,12 @@ function FeedPage() {
     }
   }
 
+  // Reload when the signed-in user becomes known so likes/saves/follows show correctly after refresh.
+  const viewerId = useCurrentUserId();
   useEffect(() => {
     fetchFeed();
     fetchStories();
-  }, [tab]);
+  }, [tab, viewerId]);
 
   // Realtime hook for incoming posts and story events
   useRealtime(
